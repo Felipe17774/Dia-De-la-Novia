@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dia de la novia AlexDev</title>
+    <link href="https://fonts.googleapis.com/css?family=Indie+Flower" rel="stylesheet">
+</head>
+
+  <!--
+
+Contáctame:
+
+    * Invitame un café
+ https://buymeacoffee.com/alexx.dev
+
+    * Portafolio Web
+ https://alexxdev.vercel.app
+
+    * Sigueme en tiktok
+ https://www.tiktok.com/@alexx.dev?is_from_webapp=1&sender_device=pc
+ 
+    *Canal de WhatsApp
+ https://whatsapp.com/channel/0029VazQEXq90x2vIdNkrH1p
+
+ 
+ WhatsApp: +52 1 55 6628 1018
+
+-->
+
+<style>
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; 
+    background-color: #000; 
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+canvas {
+    display: block; 
+}
+</style>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let appStarted = false;
+
+// UTILS
+function hexToRgb(hex) {
+    const bigint = parseInt(hex.slice(1), 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+}
+
+function rgbToHex(r, g, b) {
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function interpolateColor(color1, color2, factor) {
+    const [r1, g1, b1] = hexToRgb(color1);
+    const [r2, g2, b2] = hexToRgb(color2);
+    const r = Math.round(r1 + factor * (r2 - r1));
+    const g = Math.round(g1 + factor * (g2 - g1));
+    const b = Math.round(b1 + factor * (b2 - b1));
+    return rgbToHex(r, g, b);
+}
+
+// ARRAYS
+const stars = [];
+const shootingStars = [];
+const fallingElements = [];
+const explosionParticles = [];
+
+const phrases = [
+    "Te Amo", "Mi Reina Hermosa", "Eres preciosa", "Me encantas", 
+    "Amor de mi vida", "Sharon & Felipe", 
+    "Siempre tú", "Mi universo", "Te adoro", "#09"
+];
+
+const images = [
+    'https://png.pngtree.com/png-vector/20220619/ourmid/pngtree-sparkling-star-vector-icon-glitter-star-shape-png-image_5228522.png'
+];
+
+const heartImages = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg', '5.jpeg', '6.jpeg', '7.jpeg', '8.jpeg', '9.jpeg', '10.jpeg', '11.jpeg', '12.jpeg', '13.jpeg', '14.jpeg'];
+
+const textColorsCycle = [
+    '#FFD700', '#FFA500', '#ADFF2F', '#00FFFF', '#FF69B4', '#FFFFFF', '#9932CC'
+];
+
+let currentColorIndex = 0;
+let nextColorIndex = 1;
+let transitionProgress = 0;
+const transitionSpeed = 0.005;
+
+let cameraX = 0;
+let cameraY = 0;
+let zoomLevel = 1;
+const focalLength = 300; 
+
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    stars.length = 0;
+    for (let i = 0; i < 200; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            radius: Math.random() * 1.5 + 0.5,
+            alpha: Math.random(),
+            delta: (Math.random() * 0.02) + 0.005
+        });
+    }
+}
+
+function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#0a0a23");
+    gradient.addColorStop(1, "#0c0004ff");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawStars() {
+    stars.forEach(star => {
+        star.alpha += star.delta;
+        if (star.alpha <= 0 || star.alpha >= 1) star.delta *= -1;
+        ctx.save();
+        ctx.globalAlpha = star.alpha;
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
+function createShootingStar() {
+    if (!appStarted) return;
+    shootingStars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height / 2,
+        length: Math.random() * 300 + 100,
+        speed: Math.random() * 10 + 8,
+        angle: Math.PI / 4,
+        opacity: 1
+    });
+}
+
+function drawShootingStars() {
+    for (let i = shootingStars.length - 1; i >= 0; i--) {
+        const s = shootingStars[i];
+        const endX = s.x - Math.cos(s.angle) * s.length;
+        const endY = s.y - Math.sin(s.angle) * s.length;
+
+        const gradient = ctx.createLinearGradient(s.x, s.y, endX, endY);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${s.opacity})`);
+        gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        s.x += Math.cos(s.angle) * s.speed;
+        s.y += Math.sin(s.angle) * s.speed;
+        s.opacity -= 0.015;
+
+        if (s.opacity <= 0) shootingStars.splice(i, 1);
+    }
+}
+
+function createTextExplosion() {
+    const particleCount = 400;
+    
+    const estimatedTextWidth = Math.min(canvas.width * 0.7, 500); 
+
+    for (let i = 0; i < particleCount; i++) {
+        const offsetX = (Math.random() - 0.5) * estimatedTextWidth;
+        const offsetY = (Math.random() - 0.5) * 60;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 12 + 2;
+
+        const particleColor = Math.random() > 0.15 ? '#FF69B4' : '#FFFFFF';
+
+        explosionParticles.push({
+            x: (canvas.width / 2) + offsetX,
+            y: (canvas.height / 2) - 20 + offsetY,
+            vx: Math.cos(angle) * speed + (offsetX * 0.03), 
+            vy: Math.sin(angle) * speed,
+            radius: Math.random() * 3.5 + 1,
+            color: particleColor,
+            alpha: 1,
+            decay: Math.random() * 0.015 + 0.01 
+        });
+    }
+}
+
+function drawExplosionParticles() {
+    for (let i = explosionParticles.length - 1; i >= 0; i--) {
+        const p = explosionParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+            explosionParticles.splice(i, 1);
+            continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+function createFallingElement() {
+    const rand = Math.random();
+    let type = rand < 0.6 ? 'phrase' : (rand < 0.8 ? 'image' : 'heart');
+
+    const minZ = focalLength * 1.5;
+    const maxZ = focalLength * 5;
+    const initialZ = minZ + Math.random() * (maxZ - minZ);
+
+    const spawnRangeX = (canvas.width / focalLength) * maxZ * 1.1;
+    const spawnRangeY = (canvas.height / focalLength) * maxZ * 1.1;
+
+    const concentrationFactor = 0.35; 
+    const initialX = ((Math.random() + Math.random() - 1) * 0.5) * spawnRangeX * concentrationFactor;
+    const initialY = ((Math.random() + Math.random() - 1) * 0.5) * spawnRangeY * concentrationFactor;
+
+    let content, baseSize;
+
+    if (type === 'phrase') {
+        content = phrases[Math.floor(Math.random() * phrases.length)];
+        baseSize = 35;
+    } else {
+        content = new Image();
+        content.src = type === 'heart' ? heartImages[Math.floor(Math.random() * heartImages.length)] : images[Math.floor(Math.random() * images.length)];
+        baseSize = 60;
+    }
+
+    fallingElements.push({
+        type: type,
+        content: content,
+        x: initialX,
+        y: initialY,
+        z: initialZ,
+        baseSize: baseSize,
+        speedZ: Math.random() * 8 + 6,
+    });
+}
+
+function drawFallingElements() {
+    if (!appStarted) return;
+
+    const currentTextColor = interpolateColor(
+        textColorsCycle[currentColorIndex],
+        textColorsCycle[nextColorIndex],
+        transitionProgress
+    );
+
+    for (let i = fallingElements.length - 1; i >= 0; i--) {
+        const el = fallingElements[i];
+        el.z -= el.speedZ * zoomLevel;
+
+        if (el.z <= 0) {
+            fallingElements.splice(i, 1);
+            createFallingElement();
+            continue;
+        }
+
+        const perspectiveScale = focalLength / el.z;
+        const size = el.baseSize * perspectiveScale * zoomLevel;
+        const opacity = Math.max(0, Math.min(1, perspectiveScale));
+
+        const displayX = (el.x - cameraX) * perspectiveScale + canvas.width / 2;
+        const displayY = (el.y - cameraY) * perspectiveScale + canvas.height / 2;
+
+        ctx.save();
+        ctx.globalAlpha = opacity;
+
+        if (el.type === 'phrase') {
+            ctx.fillStyle = currentTextColor;
+            ctx.font = `bold ${size}px "Indie Flower", cursive`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(el.content, displayX, displayY);
+        } else if (el.content.complete && el.content.naturalHeight !== 0) {
+            ctx.drawImage(el.content, displayX - size / 2, displayY - size / 2, size, size);
+        }
+
+        ctx.restore();
+
+        if ((displayX + size / 2 < 0 || displayX - size / 2 > canvas.width ||
+             displayY + size / 2 < 0 || displayY - size / 2 > canvas.height) && el.z > focalLength) {
+            fallingElements.splice(i, 1);
+            createFallingElement();
+        }
+    }
+}
+
+function drawWelcomeText() {
+    if (appStarted) return; 
+    
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    ctx.fillStyle = '#FF69B4'; 
+    ctx.font = `bold ${Math.min(canvas.width * 0.08, 65)}px "Indie Flower", cursive`;
+    
+    ctx.shadowColor = '#FF69B4';
+    ctx.shadowBlur = 15;
+    ctx.fillText("Feliz Día de la Novia", canvas.width / 2, canvas.height / 2 - 20);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `${Math.min(canvas.width * 0.04, 24)}px "Indie Flower", cursive`;
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.7;
+    ctx.fillText("(Haz clic en la pantalla)", canvas.width / 2, canvas.height / 2 + 50);
+    
+    ctx.restore();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground();
+    drawStars();
+    drawShootingStars();
+    
+    drawFallingElements();
+    drawExplosionParticles();
+    drawWelcomeText();
+
+    if (appStarted) {
+        transitionProgress += transitionSpeed;
+        if (transitionProgress >= 1) {
+            transitionProgress = 0;
+            currentColorIndex = nextColorIndex;
+            nextColorIndex = (nextColorIndex + 1) % textColorsCycle.length;
+        }
+    }
+}
+
+window.addEventListener('click', () => {
+    if (!appStarted) {
+        appStarted = true;
+        
+        createTextExplosion();
+        
+        const maxElements = 100; 
+        for (let i = 0; i < maxElements; i++) {
+            createFallingElement();
+        }
+    }
+});
+
+canvas.addEventListener('wheel', (event) => {
+    if (!appStarted) return;
+    event.preventDefault();
+    const scaleAmount = 0.1;
+    zoomLevel = event.deltaY < 0 ? zoomLevel + scaleAmount : zoomLevel - scaleAmount;
+    zoomLevel = Math.max(0.1, Math.min(zoomLevel, 5));
+}, { passive: false });
+
+canvas.addEventListener('mousedown', (e) => {
+    if (!appStarted) return;
+    isDragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    canvas.style.cursor = 'grabbing';
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isDragging || !appStarted) return;
+    const dx = e.clientX - lastMouseX;
+    const dy = e.clientY - lastMouseY;
+    cameraX -= dx / zoomLevel;
+    cameraY -= dy / zoomLevel;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+});
+
+canvas.addEventListener('mouseup', () => {
+    canvas.style.cursor = 'pointer';
+    isDragging = false;
+});
+
+window.addEventListener('resize', resizeCanvas);
+
+resizeCanvas();
+animate();
+setInterval(createShootingStar, 500);
+    </script>
+
+      <!--
+
+Contáctame:
+
+    * Invitame un café
+ https://buymeacoffee.com/alexx.dev
+
+    * Portafolio Web
+ https://alexxdev.vercel.app
+
+    * Sigueme en tiktok
+ https://www.tiktok.com/@alexx.dev?is_from_webapp=1&sender_device=pc
+ 
+    *Canal de WhatsApp
+ https://whatsapp.com/channel/0029VazQEXq90x2vIdNkrH1p
+
+ 
+ WhatsApp: +52 1 55 6628 1018
+
+-->
+</body>
+</html>
